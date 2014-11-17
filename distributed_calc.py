@@ -37,7 +37,8 @@ if options.is_client:
 if options.is_server:
     # start own server
     serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    serversocket.bind((socket.gethostname(),options.port))
+    #serversocket.bind((socket.gethostname(),options.port))
+    serversocket.bind(('localhost',options.port))
     serversocket.listen(5)
 
     clients = []
@@ -51,8 +52,5 @@ if options.is_server:
         for (socket,addr) in clients:
             socket.close()
         serversocket.close()
-        if not clientsocket is None:
-            clientsocket.close()
-
     print("... and offline!")
 
