@@ -1,56 +1,56 @@
 #!/usr/bin/env python3
 import threading        # for Threads
 import sys              # maybe I don't need this, let's see
-import socket           # for sockets 
 import re               # regular expressions
 from optparse import OptionParser
-
-class Server:
-    def __init__(self,ip,port):
-        self.ip = ip
-        self.port = port
-
+import time
+from xmlrpc.server  import SimpleXMLRPCServer
+import xmlrpc.client
 
 parser = OptionParser()
 parser.add_option("-c", "--connect", dest="server_con", help="connect to server with the given ip address and port number", metavar="ADDRESS:PORT")
 parser.add_option("-p", "--port", dest="port", help="open port with given number", metavar="PORT", type="int", default=2222)
 parser.add_option("--client", action="store_true", dest="is_client", default=False, help="act as a client")
 parser.add_option("--server", action="store_true", dest="is_server", default=False, help="act as a server")
-
 (options,args) = parser.parse_args()
 
+
+# List of all known server
 servers = []
 
-if options.is_client:
-    # Connect to another server if such was stated on the command line
-    if not options.server_con is None:
-        ip_port_re = re.compile(r"([^:]+):([^:]+)")
-        m = ip_port_re.match(options.server_con)
-        server_ip_address = m.group(1)
-        server_port       = m.group(2)
-        servers.append(Server(server_ip_address,int(server_port)))
-
-        clientsocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        clientsocket.connect((server_ip_address,int(server_port)))
+def register_new_server(ip_address,port):
+    print("Added server {}:{} to the list of servers".format(ip_address,port))
+    servers.append({'address': ip_address, 'port' : port})
+    print(servers)
+    return 1
 
 
-if options.is_server:
-    # start own server
-    serversocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #serversocket.bind((socket.gethostname(),options.port))
-    serversocket.bind(('localhost',options.port))
-    serversocket.listen(5)
+# start own server
+server = SimpleXMLRPCServer(('localhost',options.port))
+server.register_function(register_new_server,"register_new_server")
+print("Server started...")
 
-    clients = []
-    try:
-        while True:
-            clientsocket, address = serversocket.accept()
-            print("New clientsocket: {} with address: {}".format(clientsocket,address))
-            clients.append((clientsocket,address))
-    except(KeyboardInterrupt,SystemExit):
-        print("Shutting down...")
-        for (socket,addr) in clients:
-            socket.close()
-        serversocket.close()
-    print("... and offline!")
+ip_port_re = re.compile(r"([^:]+):([^:]+)")
+
+# Connect to another server if such was stated on the command line
+if not options.server_con is None:
+    m = ip_port_re.match(options.server_con)
+    server_ip_address = m.group(1)
+    server_port       = m.group(2)
+
+    servers.append({'address' : server_ip_address, 'port' : int(server_port)})
+    print("Connected to other server...")
+    con = xmlrpc.client.ServerProxy("http://" + options.server_con + "/")
+    con.register_new_server('localhost',options.port)
+    print("Message send...")
+
+try:
+    server.serve_forever()
+    # send information about all known servers to the new one
+    # send the information of the new server to all other known servers
+except(KeyboardInterrupt,SystemExit):
+    print("Shutting down...")
+except:
+    print("Not foreseen shutdown")
+print("... and offline!")
 
