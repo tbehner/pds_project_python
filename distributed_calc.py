@@ -42,14 +42,45 @@ def register_new_server(ip_address,port):
     print("Added server {}:{} to the list of servers".format(ip_address,port))
     servers.append({'address': ip_address, 'port' : port})
     print(servers)
-    # populate_servers()
+    for server in servers:
+        # TODO hier einzelne Threads starten?
+        if server['port'] == options.port:
+            continue
+        print("Next Server to populate list {}:{}".format(server['address'],server['port']))
+        con_str = "http://{}:{}/".format(server['address'],server['port'])
+        print("Server Adress: {}".format(con_str))
+        con = xmlrpc.client.ServerProxy(con_str)
+        con.check_server_list(servers)
     return 1
+
+def check_server_list(server_list):
+    for server in server_list:
+        if not server in servers:
+            servers.append(server)
+            print("Added server {}:{} to the list of servers".format(server['address'],server['port']))
+    return 1
+
+def start_serving(server):
+    try:
+        print("Server started...")
+        server.serve_forever()
+        # send information about all known servers to the new one
+        # send the information of the new server to all other known servers
+    except:
+        print("Not foreseen shutdown")
+    print("... and offline!")
 
 
 # start own server
 server = SimpleXMLRPCServer(('localhost',options.port))
 server.register_function(register_new_server,"register_new_server")
-print("Server started...")
+server.register_function(check_server_list,"check_server_list")
+server_thread = threading.Thread(target=start_serving,args=(server,))
+server_thread.daemon = True
+server_thread.start()
+
+servers.append({'address':'localhost','port':options.port})
+print("thread should be started")
 
 
 # Connect to another server if such was stated on the command line
@@ -64,15 +95,11 @@ if not options.server_con is None:
     con = xmlrpc.client.ServerProxy("http://" + options.server_con + "/")
     con.register_new_server('localhost',options.port)
     print("Message send...")
+else:
+    servers.append({'address':'localhost','port':options.port})
 
 try:
-    server.serve_forever()
-    # send information about all known servers to the new one
-    # send the information of the new server to all other known servers
-except(KeyboardInterrupt,SystemExit):
+    server_thread.join()
+except KeyboardInterrupt:
     print("Shutting down...")
-except:
-# TODO say bye
-    print("Not foreseen shutdown")
-print("... and offline!")
 
