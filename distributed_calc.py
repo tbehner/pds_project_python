@@ -14,31 +14,23 @@ parser.add_option("--client", action="store_true", dest="is_client", default=Fal
 parser.add_option("--server", action="store_true", dest="is_server", default=False, help="act as a server")
 (options,args) = parser.parse_args()
 
+own_connection = 'localhost:{}'.format(options.port)
 
-# List of all known server
+# List of all known servers in format 'address:port'
 servers = []
 
-def register_new_server(ip_address,port):
-    print("Added server {}:{} to the list of servers".format(ip_address,port))
-    servers.append({'address': ip_address, 'port' : port})
-    print(servers)
+"""
+    local functions
+    
+    these are functions which are used by the programm working as a client
+"""
+# populate the server list to all known servers
+def populate_servers():
     for server in servers:
-        # TODO hier einzelne Threads starten?
-        if server['port'] == options.port:
+        if server == own_connection:
             continue
-        print("Next Server to populate list {}:{}".format(server['address'],server['port']))
-        con_str = "http://{}:{}/".format(server['address'],server['port'])
-        print("Server Adress: {}".format(con_str))
-        con = xmlrpc.client.ServerProxy(con_str)
+        con = xmlrpc.client.ServerProxy(get_con_string(server))
         con.check_server_list(servers)
-    return 1
-
-def check_server_list(server_list):
-    for server in server_list:
-        if not server in servers:
-            servers.append(server)
-            print("Added server {}:{} to the list of servers".format(server['address'],server['port']))
-    return 1
 
 def start_serving(server):
     try:
@@ -50,35 +42,66 @@ def start_serving(server):
         print("Not foreseen shutdown")
     print("... and offline!")
 
+def get_con_string(server):
+    return "http://{}/".format(server)
+
+"""
+    server functions
+
+    these are functions which are serverd by the xmlrpc server
+"""
+
+def remove_server(server):
+    print("Saying bye to server {}".format(server))
+    servers.remove(server)
+    populate_servers()
+    return 0
+
+# it is assumed that server is given in the format 'address:port'
+def register_new_server(server):
+    if not server in servers:
+        print("New server {}".format(server))
+        servers.append(server)
+        populate_servers()
+    return 1
+
+def check_server_list(server_list):
+    servers = server_list
+    print(servers)
+    return 1
 
 # start own server
 server = SimpleXMLRPCServer(('localhost',options.port))
 server.register_function(register_new_server,"register_new_server")
 server.register_function(check_server_list,"check_server_list")
+server.register_function(remove_server,"remove_server")
 server_thread = threading.Thread(target=start_serving,args=(server,))
 server_thread.daemon = True
 server_thread.start()
 
-servers.append({'address':'localhost','port':options.port})
+servers.append(own_connection)
 print("thread should be started")
 
-ip_port_re = re.compile(r"([^:]+):([^:]+)")
 
 # Connect to another server if such was stated on the command line
 if not options.server_con is None:
-    m = ip_port_re.match(options.server_con)
-    server_ip_address = m.group(1)
-    server_port       = m.group(2)
-
-    servers.append({'address' : server_ip_address, 'port' : int(server_port)})
-    print("Connected to other server...")
-    con = xmlrpc.client.ServerProxy("http://" + options.server_con + "/")
-    con.register_new_server('localhost',options.port)
-    print("Message send...")
+    print("Connecting to other server...")
+    con = xmlrpc.client.ServerProxy(get_con_string(options.server_con))
+    con.register_new_server(own_connection)
+    print("...connected.")
 else:
-    servers.append({'address':'localhost','port':options.port})
+    servers.append(own_connection)
 
 try:
     server_thread.join()
 except KeyboardInterrupt:
+    if not options.server_con is None:
+        con = xmlrpc.client.ServerProxy(get_con_string(options.server_con))
+        con.remove_server(own_connection)
+    else:
+        for s in servers:
+            if s != own_connection:
+                con = xmlrpc.client.ServerProxy(get_con_string(s))
+                con.remove_server(own_connection)
+                break
     print("Shutting down...")
