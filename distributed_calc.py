@@ -17,8 +17,17 @@ parser.add_option("--server", action="store_true", dest="is_server", default=Fal
 (options,args) = parser.parse_args()
 
 
+
 # List of all known server
 servers = []
+
+# TODO implement bye functionality
+def remove_server(server):
+    servers.delete(server)
+    for s in servers:
+# populate servers
+        pass
+    return 0
 
 # gets called by register_new_server to populate the new server and all other known servers
 def populate_servers():
@@ -63,6 +72,7 @@ try:
 except(KeyboardInterrupt,SystemExit):
     print("Shutting down...")
 except:
+# TODO say bye
     print("Not foreseen shutdown")
 print("... and offline!")
 
