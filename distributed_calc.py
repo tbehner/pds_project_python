@@ -35,7 +35,9 @@ if options.server_con is not None:
     print("Connecting to other server...")
     con = xmlrpc.client.ServerProxy(get_con_string(options.server_con))
     con.register_new_server(options.port)
+    server_func.known_server_addr.append(options.server_con)
     print("...connected.")
+    print("Initial server list: {}".format(server_func.known_server_addr))
 
 """
 wait until shutdown
