@@ -25,19 +25,22 @@ class ServerFunctions:
             populated_servers = self.known_server_addr.copy()
             populated_servers.remove(server)
             con = xmlrpc.client.ServerProxy(get_con_string(server))
-            con.check_server_list(populated_servers)
+            con.refreshRemoteServerList(populated_servers)
 
 # 
 # methods to be served
 #
-    def remove_server(self,client_port):
+    def unregisterRemoteServer(self,client_port):
         server = get_addr_string(ChattyRequestHandler.log[-1][0],client_port)
-        print("Saying bye to server {}".format(server))
-        self.known_server_addr.remove(server)
-        self.__populate_servers()
+        if server in self.known_server_addr:
+            print("Saying bye to server {}".format(server))
+            self.known_server_addr.remove(server)
+        else:
+            print("Bye from unknown server{}".format(server))
+        print("Updated server list {}".format(self.known_server_addr))
         return 0
 
-    def register_new_server(self,client_port):
+    def registerRemoteServer(self,client_port):
         server_addr = get_addr_string(ChattyRequestHandler.log[-1][0],client_port)
         print("Register new server {}".format(server_addr))
         if server_addr not in self.known_server_addr:
@@ -46,7 +49,7 @@ class ServerFunctions:
         print("New Server list: {}".format(self.known_server_addr))
         return 1
 
-    def check_server_list(self,server_list):
+    def refreshRemoteServerList(self,server_list):
         print("Get new server list {}".format(server_list))
         for server in server_list:
             if server not in self.known_server_addr:

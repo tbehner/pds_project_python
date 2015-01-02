@@ -1,4 +1,13 @@
 from xmlrpc.server  import SimpleXMLRPCServer
+import re
+
+def translate_localhost(ip_string):
+    ip_addr, port = re.split(':',ip_string)
+    if re.match('localhost',ip_addr):
+        return ':'.join(('127.0.0.1',port))
+    else:
+        return ip_string
+
 
 def start_serving(server):
     try:
