@@ -17,6 +17,10 @@ class ChattyRequestHandler(SimpleXMLRPCRequestHandler):
 class ServerFunctions:
     def __init__(self):
         self.known_server_addr = []
+        self.got_token = False
+        self.got_token_from = None
+        self.next_token_server = None
+        self.lock = threading.Lock()
 
     def __populate_servers(self):
         for server in self.known_server_addr:
@@ -57,4 +61,9 @@ class ServerFunctions:
         print("New Server list: {}".format(self.known_server_addr))
         return 1
 
+    def set_token(self,client_port):
+        print("I got the token!")
+        self.got_token = True
+        self.got_token_from = get_addr_string(ChattyRequestHandler.log[-1][0],client_port)
+        return 1
 

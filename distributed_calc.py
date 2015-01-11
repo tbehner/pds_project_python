@@ -8,17 +8,29 @@ import xmlrpc.client
 from distributed_server import *
 from utility_functions import *
 
-"""
-TODOs:
-    * Hier alles bereinigen, was sich über die Zeit angesammelt hat
-    * mit Alexander kommunizieren wie wir die Algorithmen aufteilen
-    * Algorithmus implementieren
-"""
 
 parser = OptionParser()
 parser.add_option("-c", "--connect", dest="server_con", help="connect to server with the given ip address and port number", metavar="ADDRESS:PORT")
 parser.add_option("-p", "--port", dest="port", help="open port with given number", metavar="PORT", type="int", default=2222)
 (options,args) = parser.parse_args()
+
+def start_token_ring(server_func):
+    while True:
+        if len(server_func.known_server_addr)>0:
+            print("HEY! Es ist mindestens ein Server bekannt")
+            if server_func.got_token:
+                server_func.got_token = False
+                print("Got token from: {}".format(server_func.got_token_from))
+                next_server = get_next_server(server_func)
+                print("Next server {}".format(next_server))
+                time.sleep(5)
+                # FIXME do some important calculations
+                print("Do important calculations!")
+                # pass token to next server
+                print("Pass on token")
+                con = xmlrpc.client.ServerProxy(get_con_string(next_server))
+                con.set_token(options.port)
+        time.sleep(1)
 
 """
 start server thread
@@ -39,6 +51,13 @@ if options.server_con is not None:
     server_func.known_server_addr.append(options.server_con)
     print("...connected.")
     print("Initial server list: {}".format(server_func.known_server_addr))
+else:
+    server_func.got_token = True
+
+token_ring_thread = threading.Thread(target=start_token_ring,args=(server_func,))
+token_ring_thread.daemon = True
+token_ring_thread.start()
+
 
 """
 wait until shutdown
