@@ -22,7 +22,13 @@ class ServerFunctions:
         self.next_token_server = None
         self.lock = threading.Lock()
         self.own_port = own_port
-
+    
+    def _dispatch(self, method, params):
+        method_name = str(method)
+        method_name_parts = method_name.split(".")
+        method_name = method_name_parts[len(method_name_parts)-1]
+        getattr(ServerFunctions, method_name)(self, *params)
+        
     def __populate_servers(self):
         for server in self.known_server_addr:
             print("Populate server list to {}".format(server))
