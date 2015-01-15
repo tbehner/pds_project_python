@@ -26,6 +26,7 @@ def get_con_string(server):
     return "http://{}/".format(server)
 
 # get next server in list
+#<<<<<<< HEAD
 def get_next_server(server_func,position=None):
     next_server = None
     next_server_idx = None
@@ -52,3 +53,20 @@ def get_next_server(server_func,position=None):
         next_server = server_func.known_server_addr[next_server_idx]
 
     return (next_server, next_server_idx)
+#=======
+#def get_next_server(server_func):
+#    next_server = None
+#    if not server_func.known_server_addr:
+#        return next_server # which is None
+#    if server_func.got_token_from is None:
+#        # start at first element
+#        next_server = server_func.known_server_addr[0]
+#    else:
+#        # get next one
+#        next_server_idx = server_func.known_server_addr.index(server_func.got_token_from)+1
+#        if next_server_idx >= len(server_func.known_server_addr):
+#            # start over
+#            next_server_idx = 0
+#        next_server = server_func.known_server_addr[next_server_idx]
+#    return next_server
+#>>>>>>> dev

@@ -7,12 +7,22 @@ from xmlrpc.server  import SimpleXMLRPCRequestHandler
 import xmlrpc.client
 from distributed_server import *
 from utility_functions import *
+from netifaces import AF_INET, AF_INET6, AF_LINK, AF_PACKET, AF_BRIDGE
+import netifaces as ni
 
 parser = OptionParser()
 parser.add_option("-c", "--connect", dest="server_con", help="connect to server with the given ip address and port number", metavar="ADDRESS:PORT")
 parser.add_option("-p", "--port", dest="port", help="open port with given number", metavar="PORT", type="int", default=2222)
 parser.add_option("--token-ring", dest="token_ring", action="store_true", help="set algorithm to token ring", default=False)
 (options,args) = parser.parse_args()
+
+def print_own_ip_addresses(port):
+    ip_list = ni.interfaces()
+    print("----------------------------------------")
+    print("Server is listening to:")
+    for ip in ip_list:
+        print(ni.ifaddresses(ip)[AF_INET][0]['addr'] + ":" + str(port))
+    print("----------------------------------------")
 
 def start_token_ring(server_func):
     while True:
@@ -30,8 +40,10 @@ def start_token_ring(server_func):
                 # pass token to next server
                 print("Pass on token")
                 try:
+                    print("Server " + next_server)
+                    print("Server " + get_con_string(next_server))
                     con = xmlrpc.client.ServerProxy(get_con_string(next_server))
-                    con.set_token(options.port)
+                    con.ServerFunctions.acceptToken(str(options.port))
                 except:
                     print("ERROR:\nTrying again in a sec")
                     time.sleep(1)
@@ -44,7 +56,7 @@ def connect_to_server(connection,server_func):
     connection = translate_localhost(connection)
     print("Connecting to other server...")
     con = xmlrpc.client.ServerProxy(get_con_string(connection))
-    con.registerRemoteServer(options.port)
+    con.ServerFunctions.registerRemoteServer(str(options.port))
     server_func.known_server_addr.append(connection)
     print("...connected.")
 
@@ -52,15 +64,21 @@ def connect_to_server(connection,server_func):
 start server thread
 """
 server = SimpleXMLRPCServer(("",options.port),ChattyRequestHandler)
-server_func = ServerFunctions()
-server.register_instance(server_func)
+# reset port, in case the port was arbitrary set by system
+options.port = server.socket.getsockname()[1]
+server_func = ServerFunctions(options.port)
+server.register_function(server_func.registerRemoteServer, 'ServerFunctions.registerRemoteServer')
+server.register_function(server_func.unregisterRemoteServer, 'ServerFunctions.unregisterRemoteServer')
+server.register_function(server_func.refreshRemoteServerList, 'ServerFunctions.refreshRemoteServerList')
+server.register_function(server_func.acceptToken, 'ServerFunctions.acceptToken')
 server_thread = threading.Thread(target=start_serving,args=(server,))
 server_thread.daemon = True
 server_thread.start()
 
+print_own_ip_addresses(options.port)
+
 if options.server_con is not None:
 #connect to existing network
-    print("Server connection string >{}<".format(options.server_con))
     connect_to_server(options.server_con,server_func)
     print("Initial server list: {}".format(server_func.known_server_addr))
 
@@ -99,8 +117,9 @@ except KeyboardInterrupt:
     print("Shutting down...")
     while server_func.got_token:
         time.sleep(5)
+
     print("Unregister in complete list {}".format(server_func.known_server_addr))
     for s in server_func.known_server_addr:
         print("Unregister at server {}".format(s))
         con = xmlrpc.client.ServerProxy(get_con_string(s))
-        con.server_func.unregisterRemoteServer(options.port)
+        con.ServerFunctions.unregisterRemoteServer(options.port)
