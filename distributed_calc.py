@@ -67,10 +67,7 @@ server = SimpleXMLRPCServer(("",options.port),ChattyRequestHandler)
 # reset port, in case the port was arbitrary set by system
 options.port = server.socket.getsockname()[1]
 server_func = ServerFunctions(options.port)
-server.register_function(server_func.registerRemoteServer, 'ServerFunctions.registerRemoteServer')
-server.register_function(server_func.unregisterRemoteServer, 'ServerFunctions.unregisterRemoteServer')
-server.register_function(server_func.refreshRemoteServerList, 'ServerFunctions.refreshRemoteServerList')
-server.register_function(server_func.acceptToken, 'ServerFunctions.acceptToken')
+server.register_instance(server_func)
 server_thread = threading.Thread(target=start_serving,args=(server,))
 server_thread.daemon = True
 server_thread.start()
