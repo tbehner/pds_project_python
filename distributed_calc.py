@@ -103,4 +103,4 @@ except KeyboardInterrupt:
     for s in server_func.known_server_addr:
         print("Unregister at server {}".format(s))
         con = xmlrpc.client.ServerProxy(get_con_string(s))
-        con.unregisterRemoteServer(options.port)
+        con.server_func.unregisterRemoteServer(options.port)
