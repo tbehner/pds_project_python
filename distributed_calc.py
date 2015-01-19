@@ -45,8 +45,8 @@ def print_own_ip_addresses(port):
 
     print("----------------------------------------")
 
-def generate_calculations(calculations_queue):
-    calculations = ["+", "-", "*", "/"]
+def generate_calculations(server_func, calculations_queue):
+    calculations = [ "ServerFunction.calculationSum", "ServerFunction.calculationSubtract", "ServerFunction.calculationMultiply", "ServerFunction.calculationDivide", "ServerFunction.calculationStart" ]
 #    rnd_time_lower_bound = 0.05
 #    rnd_time_upper_bound = 0.5
     rnd_time_lower_bound = 0.5
@@ -60,12 +60,32 @@ def generate_calculations(calculations_queue):
     next_calc_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
     while current_time - start_time < 20 or len(calculations_queue)>0:
         time.sleep(min_wait_time)
+        if server_func.got_token and len(calculations_queue) > 0:
+            next_op = calculations_queue.pop(0)
+            print("Next operation to calculate: {}".format(next_op))
+            if re.search("Start",next_op[0]):
+                server_func.calculationStart(next_op[1][0])
+            elif re.search("Sum",next_op[0]):
+                server_func.calculationSum(next_op[1][0])
+            elif re.search("Subtract",next_op[0]):
+                server_func.calculationSubtract(next_op[1][0])
+            elif re.search("Multiply",next_op[0]):
+                server_func.calculationMultiply(next_op[1][0])
+            elif re.search("Divide",next_op[0]):
+                server_func.calculationDivide(next_op[1][0])
+
+            print("Local restult: {}".format(server_func.calculated_value))
+
+            for server in server_func.known_server_addr:
+                con = xmlrcp.client.ServerProxy(get_con_string(server))
+                getattr(con,next_op[0])(*next_op[1])
+
         if time.time() >= next_calc_time and current_time - start_time < 20:
-            calculation_op = random.sample(calculations,1)
+            calculation_op    = calculations[random.randint(0,len(calculations)-2)]
             calculation_value = random.randint(1, 10)
-            calculations_queue.append([calculation_op, calculation_value])
-            next_calc_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
-            print("New calculation: {}".format((calculation_op,calculation_value)))
+            calculations_queue.append((calculation_op, [calculation_value]))
+
+            next_calc_time    = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
         current_time = time.time()
 
 
@@ -95,7 +115,6 @@ def start_token_ring(server_func):
                 # give up token when sure someone else got it
                 server_func.got_token = False
         time.sleep(1)
-
 
 def connect_to_server(connection, server_func):
     connection = translate_localhost(connection)
@@ -155,18 +174,14 @@ try:
 
         if re.search('connect', user_input):
             mo = re.search('([.\w]+):(\d+)', user_input)
-            print("Matched String >{}< -- >{}< -- >{}<".format(mo.group(0), mo.group(1), mo.group(2)))
             # match for 'localhost' or an ip4 address
-            if ip4_addr_re.search(
-                    mo.group(1)) or re.match(
-                    'localhost',
-                    mo.group(1)):
+            if ip4_addr_re.search( mo.group(1)) or re.match( 'localhost', mo.group(1)):
                 connect_to_server(mo.group(0), server_func)
 
         if re.match('\s*start',user_input):
             initial_value = float(random.randint(1,10))
-            calc_queue = [('start',initial_value)]
-            calc_thread = threading.Thread(target=generate_calculations,args=(calc_queue,))
+            calc_queue = [('ServerFunction.calculationStart',[initial_value])]
+            calc_thread = threading.Thread(target=generate_calculations,args=(server_func,calc_queue))
             calc_thread.daemon = True
             calc_thread.start()
 

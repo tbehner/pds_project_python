@@ -83,18 +83,26 @@ class ServerFunctions:
         return 1
 
     def calculationStart(self,value):
-        self.calculation_value = value
+        self.calculated_value = value
+        return 0
 
     def calculationSum(self,value):
-        self.calculation_value+=value
+        self.calculated_value = self.calculated_value + value
+        print("Calculated value: {}".format(self.calculated_value))
+        return 0
 
     def calculationSubtract(self,value):
-        self.calculation_value-= value
+        self.calculated_value = self.calculated_value - value
+        print("Calculated value: {}".format(self.calculated_value))
+        return 0
 
     def calculationMultiply(self,value):
-        self.calculation_value*= value
+        self.calculated_value = self.calculated_value * value
+        print("Calculated value: {}".format(self.calculated_value))
+        return 0
 
     def calculationDivide(self,value):
-        self.calculation_value/= value
-
+        self.calculated_value = self.calculated_value / value
+        print("Calculated value: {}".format(self.calculated_value))
+        return 0
 
