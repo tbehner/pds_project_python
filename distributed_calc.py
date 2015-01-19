@@ -7,13 +7,14 @@ from xmlrpc.server  import SimpleXMLRPCRequestHandler
 import xmlrpc.client
 from distributed_server import *
 from utility_functions import *
-from netifaces import AF_INET, AF_INET6, AF_LINK, AF_PACKET, AF_BRIDGE
+from netifaces import AF_INET
 import netifaces as ni
 
 parser = OptionParser()
 parser.add_option("-c", "--connect", dest="server_con", help="connect to server with the given ip address and port number", metavar="ADDRESS:PORT")
 parser.add_option("-p", "--port", dest="port", help="open port with given number", metavar="PORT", type="int", default=2222)
 parser.add_option("--token-ring", dest="token_ring", action="store_true", help="set algorithm to token ring", default=False)
+parser.add_option("--ricart-agrawala", dest="ricart-agrawala", action="store_true", help="set algorithm to ricart-agrawala", default=False)
 (options,args) = parser.parse_args()
 
 def print_own_ip_addresses(port):
