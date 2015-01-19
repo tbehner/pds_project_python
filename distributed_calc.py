@@ -21,8 +21,11 @@ def print_own_ip_addresses(port):
     ip_list = ni.interfaces()
     print("----------------------------------------")
     print("Server is listening to:")
+    print("ip_list: {}".format(ip_list))
     for ip in ip_list:
-        print(ni.ifaddresses(ip)[AF_INET][0]['addr'] + ":" + str(port))
+        if AF_INET in ni.ifaddresses(ip).keys():
+            print(ni.ifaddresses(ip)[AF_INET][0]['addr'] + ":" + str(port))
+
     print("----------------------------------------")
 
 def start_token_ring(server_func):
