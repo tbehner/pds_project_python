@@ -96,6 +96,7 @@ print("----------------------------------------")
 print("Commands:")
 print("\"stop\" to shut down the server and stop the program")
 print("\"connect x.x.x.x:y\" to connect to server on ip x.x.x.x and port y")
+print("\"list\" to list the nodes in the network")
 print("----------------------------------------")
 
 ip4_addr_re = re.compile('(:?\d{1,4}\.){3}\d{1,4}')
@@ -111,6 +112,8 @@ try:
             # match for 'localhost' or an ip4 address
             if ip4_addr_re.search(mo.group(1)) or re.match('localhost',mo.group(1)):
                 connect_to_server(mo.group(0),server_func)
+        if re.search('list', user_input):
+            server_func.list()
 
 #wait until shutdown
     server_thread.join()

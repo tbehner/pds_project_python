@@ -81,3 +81,6 @@ class ServerFunctions:
         self.got_token_from = get_addr_string(ChattyRequestHandler.log[-1][0],client_port)
         return 1
 
+    def list(self):
+        for server_addr in self.known_server_addr:
+            print(server_addr)
