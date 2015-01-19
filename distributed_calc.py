@@ -61,7 +61,6 @@ def connect_to_server(connection,server_func):
     print("Connecting to other server...")
     con = xmlrpc.client.ServerProxy(get_con_string(connection))
     con.ServerFunctions.registerRemoteServer(str(options.port))
-    server_func.known_server_addr.append(connection)
     print("...connected.")
 
 """
