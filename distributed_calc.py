@@ -5,10 +5,10 @@ import time
 from xmlrpc.server import SimpleXMLRPCServer
 from xmlrpc.server import SimpleXMLRPCRequestHandler
 import xmlrpc.client
-from netifaces import AF_INET, AF_INET6, AF_LINK, AF_PACKET, AF_BRIDGE
-import netifaces as ni
 from distributed_server import *
 from utility_functions import *
+from netifaces import AF_INET
+import netifaces as ni
 
 parser = OptionParser()
 parser.add_option(
@@ -39,8 +39,11 @@ def print_own_ip_addresses(port):
     ip_list = ni.interfaces()
     print("----------------------------------------")
     print("Server is listening to:")
+    print("ip_list: {}".format(ip_list))
     for ip in ip_list:
-        print(ni.ifaddresses(ip)[AF_INET][0]['addr'] + ":" + str(port))
+        if AF_INET in ni.ifaddresses(ip).keys():
+            print(ni.ifaddresses(ip)[AF_INET][0]['addr'] + ":" + str(port))
+
     print("----------------------------------------")
 
 def generate_calculations(calculations_queue):
