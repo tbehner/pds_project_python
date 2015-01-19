@@ -22,7 +22,8 @@ class ServerFunctions:
         self.next_token_server = None
         self.lock = threading.Lock()
         self.own_port = own_port
-    
+        self.calculated_value = None
+
     def _dispatch(self, method, params):
         method_name = str(method)
         method_name_parts = method_name.split(".")
@@ -84,3 +85,19 @@ class ServerFunctions:
     def list(self):
         for server_addr in self.known_server_addr:
             print(server_addr)
+
+    def calculationStart(self,value):
+        self.calculation_value = value
+
+    def calculationSum(self,value):
+        self.calculation_value+=value
+
+    def calculationSubtract(self,value):
+        self.calculation_value-= value
+
+    def calculationMultiply(self,value):
+        self.calculation_value*= value
+
+    def calculationDivide(self,value):
+        self.calculation_value/= value
+

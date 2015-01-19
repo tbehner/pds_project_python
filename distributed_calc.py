@@ -2,20 +2,37 @@
 import threading        # for Threads
 from optparse import OptionParser
 import time
-from xmlrpc.server  import SimpleXMLRPCServer
-from xmlrpc.server  import SimpleXMLRPCRequestHandler
+from xmlrpc.server import SimpleXMLRPCServer
+from xmlrpc.server import SimpleXMLRPCRequestHandler
 import xmlrpc.client
 from distributed_server import *
 from utility_functions import *
 from netifaces import AF_INET
 import netifaces as ni
+import random
 
 parser = OptionParser()
-parser.add_option("-c", "--connect", dest="server_con", help="connect to server with the given ip address and port number", metavar="ADDRESS:PORT")
-parser.add_option("-p", "--port", dest="port", help="open port with given number", metavar="PORT", type="int", default=2222)
-parser.add_option("--token-ring", dest="token_ring", action="store_true", help="set algorithm to token ring", default=False)
-parser.add_option("--ricart-agrawala", dest="ricart-agrawala", action="store_true", help="set algorithm to ricart-agrawala", default=False)
-(options,args) = parser.parse_args()
+parser.add_option(
+    "-c",
+    "--connect",
+    dest="server_con",
+    help="connect to server with the given ip address and port number",
+    metavar="ADDRESS:PORT")
+parser.add_option(
+    "-p",
+    "--port",
+    dest="port",
+    help="open port with given number",
+    metavar="PORT",
+    type="int",
+    default=2222)
+parser.add_option(
+    "--token-ring",
+    dest="token_ring",
+    action="store_true",
+    help="set algorithm to token ring",
+    default=False)
+(options, args) = parser.parse_args()
 
 def print_own_ip_addresses(port):
     ip_list = ni.interfaces()
@@ -28,14 +45,38 @@ def print_own_ip_addresses(port):
 
     print("----------------------------------------")
 
+def generate_calculations(calculations_queue):
+    calculations = ["+", "-", "*", "/"]
+#    rnd_time_lower_bound = 0.05
+#    rnd_time_upper_bound = 0.5
+    rnd_time_lower_bound = 0.5
+    rnd_time_upper_bound = 1
+    total_running_time = 20
+    min_wait_time = 0.001
+    start_time = time.time()
+    current_time = time.time()
+
+    # calculate next instance in time, that a calculation should be added
+    next_calc_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
+    while current_time - start_time < 20 or len(calculations_queue)>0:
+        time.sleep(min_wait_time)
+        if time.time() >= next_calc_time and current_time - start_time < 20:
+            calculation_op = random.sample(calculations,1)
+            calculation_value = random.randint(1, 10)
+            calculations_queue.append([calculation_op, calculation_value])
+            next_calc_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
+            print("New calculation: {}".format((calculation_op,calculation_value)))
+        current_time = time.time()
+
+
 def start_token_ring(server_func):
     while True:
-        if len(server_func.known_server_addr)>0:
+        if len(server_func.known_server_addr) > 0:
             print("Got servers, need token...")
             if server_func.got_token:
                 print("Got token from: {}".format(server_func.got_token_from))
                 time.sleep(5)
-                next_server,position = get_next_server(server_func)
+                next_server, position = get_next_server(server_func)
                 if next_server is None:
                     # i.e. wait for new servers
                     continue
@@ -44,9 +85,8 @@ def start_token_ring(server_func):
                 # pass token to next server
                 print("Pass on token")
                 try:
-                    print("Server " + next_server)
-                    print("Server " + get_con_string(next_server))
-                    con = xmlrpc.client.ServerProxy(get_con_string(next_server))
+                    con = xmlrpc.client.ServerProxy(
+                        get_con_string(next_server))
                     con.ServerFunctions.acceptToken(str(options.port))
                 except:
                     print("ERROR:\nTrying again in a sec")
@@ -56,7 +96,8 @@ def start_token_ring(server_func):
                 server_func.got_token = False
         time.sleep(1)
 
-def connect_to_server(connection,server_func):
+
+def connect_to_server(connection, server_func):
     connection = translate_localhost(connection)
     print("Connecting to other server...")
     con = xmlrpc.client.ServerProxy(get_con_string(connection))
@@ -66,27 +107,31 @@ def connect_to_server(connection,server_func):
 """
 start server thread
 """
-server = SimpleXMLRPCServer(("",options.port),ChattyRequestHandler)
+server = SimpleXMLRPCServer(("", options.port), ChattyRequestHandler)
 # reset port, in case the port was arbitrary set by system
 options.port = server.socket.getsockname()[1]
 server_func = ServerFunctions(options.port)
 server.register_instance(server_func)
-server_thread = threading.Thread(target=start_serving,args=(server,))
+server_thread = threading.Thread(target=start_serving, args=(server,))
 server_thread.daemon = True
 server_thread.start()
 
 print_own_ip_addresses(options.port)
 
 if options.server_con is not None:
-#connect to existing network
-    connect_to_server(options.server_con,server_func)
+    # connect to existing network
+    connect_to_server(options.server_con, server_func)
     print("Initial server list: {}".format(server_func.known_server_addr))
 
 if options.token_ring:
     # if the list of known_servers is empty get yourself a nice token
     if not options.server_con:
         server_func.got_token = True
-    token_ring_thread = threading.Thread(target=start_token_ring,args=(server_func,))
+    token_ring_thread = threading.Thread(
+        target=start_token_ring,
+        args=(
+            server_func,
+        ))
     token_ring_thread.daemon = True
     token_ring_thread.start()
 
@@ -96,6 +141,7 @@ print("Commands:")
 print("\"stop\" to shut down the server and stop the program")
 print("\"connect x.x.x.x:y\" to connect to server on ip x.x.x.x and port y")
 print("\"list\" to list the nodes in the network")
+print("\"start\" start the distributed calculation")
 print("----------------------------------------")
 
 ip4_addr_re = re.compile('(:?\d{1,4}\.){3}\d{1,4}')
@@ -103,25 +149,35 @@ ip4_addr_re = re.compile('(:?\d{1,4}\.){3}\d{1,4}')
 try:
     while True:
         user_input = input('> ')
-        if re.match('\s*stop',user_input):
+
+        if re.match('\s*stop', user_input):
             raise KeyboardInterrupt()
+
         if re.search('connect', user_input):
-            mo = re.search('([.\w]+):(\d+)',user_input)
+            mo = re.search('([.\w]+):(\d+)', user_input)
             print("Matched String >{}< -- >{}< -- >{}<".format(mo.group(0), mo.group(1), mo.group(2)))
             # match for 'localhost' or an ip4 address
             if ip4_addr_re.search(mo.group(1)) or re.match('localhost',mo.group(1)):
                 connect_to_server(mo.group(0),server_func)
         if re.search('list', user_input):
             server_func.list()
+        if re.match('\s*start',user_input):
+            initial_value = float(random.randint(1,10))
+            calc_queue = [('start',initial_value)]
+            calc_thread = threading.Thread(target=generate_calculations,args=(calc_queue,))
+            calc_thread.daemon = True
+            calc_thread.start()
 
-#wait until shutdown
+# wait until shutdown
     server_thread.join()
 except KeyboardInterrupt:
     print("Shutting down...")
     while server_func.got_token:
         time.sleep(5)
 
-    print("Unregister in complete list {}".format(server_func.known_server_addr))
+    print(
+        "Unregister in complete list {}".format(
+            server_func.known_server_addr))
     for s in server_func.known_server_addr:
         print("Unregister at server {}".format(s))
         con = xmlrpc.client.ServerProxy(get_con_string(s))
