@@ -9,6 +9,7 @@ from distributed_server import *
 from utility_functions import *
 from netifaces import AF_INET
 import netifaces as ni
+import random
 
 parser = OptionParser()
 parser.add_option(
@@ -33,8 +34,6 @@ parser.add_option(
     default=False)
 (options, args) = parser.parse_args()
 
-local_queue_lock = threading.Lock()
-
 def print_own_ip_addresses(port):
     ip_list = ni.interfaces()
     print("----------------------------------------")
@@ -47,23 +46,28 @@ def print_own_ip_addresses(port):
     print("----------------------------------------")
 
 def generate_calculations(calculations_queue):
-    global local_queue_lock
     calculations = ["+", "-", "*", "/"]
+#    rnd_time_lower_bound = 0.05
+#    rnd_time_upper_bound = 0.5
     rnd_time_lower_bound = 0.5
-    rnd_time_upper_bound = 2
+    rnd_time_upper_bound = 1
+    total_running_time = 20
+    min_wait_time = 0.001
     start_time = time.time()
     current_time = time.time()
-    while current_time - start_time < 20:
-        wait_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound)
-        time.sleep(wait_time)
-        calculation_op = random.sample(calculations)
-        calculation_value = random.uniform(0.1, 10)
-        local_queue_lock.acquier()
-        try:
+
+    # calculate next instance in time, that a calculation should be added
+    next_calc_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
+    while current_time - start_time < 20 or len(calculations_queue)>0:
+        time.sleep(min_wait_time)
+        if time.time() >= next_calc_time and current_time - start_time < 20:
+            calculation_op = random.sample(calculations,1)
+            calculation_value = random.randint(1, 10)
             calculations_queue.append([calculation_op, calculation_value])
-        finally:
-            local_queue_lock.release()
+            next_calc_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
+            print("New calculation: {}".format((calculation_op,calculation_value)))
         current_time = time.time()
+
 
 def start_token_ring(server_func):
     while True:
@@ -98,7 +102,7 @@ def connect_to_server(connection, server_func):
     print("Connecting to other server...")
     con = xmlrpc.client.ServerProxy(get_con_string(connection))
     con.ServerFunctions.registerRemoteServer(str(options.port))
-    server_func.known_server_addr.append(connection)
+    #server_func.known_server_addr.append(connection)
     print("...connected.")
 
 """
@@ -145,21 +149,26 @@ ip4_addr_re = re.compile('(:?\d{1,4}\.){3}\d{1,4}')
 try:
     while True:
         user_input = input('> ')
+
         if re.match('\s*stop', user_input):
             raise KeyboardInterrupt()
+
         if re.search('connect', user_input):
             mo = re.search('([.\w]+):(\d+)', user_input)
-            print("Matched String >{}< -- >{}< -- >{}<".format(mo.group(0),
-                                                               mo.group(1),
-                                                               mo.group(2)))
+            print("Matched String >{}< -- >{}< -- >{}<".format(mo.group(0), mo.group(1), mo.group(2)))
             # match for 'localhost' or an ip4 address
             if ip4_addr_re.search(
                     mo.group(1)) or re.match(
                     'localhost',
                     mo.group(1)):
                 connect_to_server(mo.group(0), server_func)
-        if re.match('\s*start',user_input)
 
+        if re.match('\s*start',user_input):
+            initial_value = float(random.randint(1,10))
+            calc_queue = [('start',initial_value)]
+            calc_thread = threading.Thread(target=generate_calculations,args=(calc_queue,))
+            calc_thread.daemon = True
+            calc_thread.start()
 
 # wait until shutdown
     server_thread.join()

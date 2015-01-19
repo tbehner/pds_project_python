@@ -22,7 +22,7 @@ class ServerFunctions:
         self.next_token_server = None
         self.lock = threading.Lock()
         self.own_port = own_port
-        self.calculated_value
+        self.calculated_value = None
 
     def _dispatch(self, method, params):
         method_name = str(method)
