@@ -26,8 +26,9 @@ class ServerFunctions:
     def _dispatch(self, method, params):
         method_name = str(method)
         method_name_parts = method_name.split(".")
-        method_name = method_name_parts[len(method_name_parts)-1]
-        getattr(ServerFunctions, method_name)(self, *params)
+        method_name = method_name_parts[-1]
+        func_output = getattr(ServerFunctions, method_name)(self, *params)
+        return func_output
         
     def __populate_servers(self):
         for server in self.known_server_addr:
