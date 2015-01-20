@@ -17,12 +17,13 @@ class ChattyRequestHandler(SimpleXMLRPCRequestHandler):
 class ServerFunctions:
     def __init__(self, own_port):
         self.known_server_addr = []
-        self.got_token = False
-        self.got_token_from = None
+        self.got_token         = False
+        self.got_token_from    = None
         self.next_token_server = None
-        self.lock = threading.Lock()
-        self.own_port = own_port
-        self.calculated_value = None
+        self.own_port          = own_port
+        self.calculated_value  = None
+        self.calc_thread       = None
+        self.calc_queue        = []
 
     def _dispatch(self, method, params):
         method_name = str(method)
@@ -30,7 +31,7 @@ class ServerFunctions:
         method_name = method_name_parts[-1]
         func_output = getattr(ServerFunctions, method_name)(self, *params)
         return func_output
-        
+
     def __populate_servers(self):
         for server in self.known_server_addr:
             print("Populate server list to {}".format(server))
@@ -84,6 +85,9 @@ class ServerFunctions:
 
     def calculationStart(self,value):
         self.calculated_value = value
+        calc_thread = threading.Thread(target=generate_calculations,args=(self,self.calc_queue))
+        calc_thread.daemon = True
+        calc_thread.start()
         return 0
 
     def calculationSum(self,value):

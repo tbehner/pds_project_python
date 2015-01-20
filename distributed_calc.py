@@ -45,69 +45,21 @@ def print_own_ip_addresses(port):
 
     print("----------------------------------------")
 
-def generate_calculations(server_func, calculations_queue):
-    calculations = [ "ServerFunction.calculationSum", "ServerFunction.calculationSubtract", "ServerFunction.calculationMultiply", "ServerFunction.calculationDivide", "ServerFunction.calculationStart" ]
-#    rnd_time_lower_bound = 0.05
-#    rnd_time_upper_bound = 0.5
-    rnd_time_lower_bound = 0.5
-    rnd_time_upper_bound = 1
-    total_running_time = 20
-    min_wait_time = 0.001
-    start_time = time.time()
-    current_time = time.time()
-
-    # calculate next instance in time, that a calculation should be added
-    next_calc_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
-    while current_time - start_time < 20 or len(calculations_queue)>0:
-        time.sleep(min_wait_time)
-        if server_func.got_token and len(calculations_queue) > 0:
-            next_op = calculations_queue.pop(0)
-            print("Next operation to calculate: {}".format(next_op))
-            if re.search("Start",next_op[0]):
-                server_func.calculationStart(next_op[1][0])
-            elif re.search("Sum",next_op[0]):
-                server_func.calculationSum(next_op[1][0])
-            elif re.search("Subtract",next_op[0]):
-                server_func.calculationSubtract(next_op[1][0])
-            elif re.search("Multiply",next_op[0]):
-                server_func.calculationMultiply(next_op[1][0])
-            elif re.search("Divide",next_op[0]):
-                server_func.calculationDivide(next_op[1][0])
-
-            print("Local restult: {}".format(server_func.calculated_value))
-
-            for server in server_func.known_server_addr:
-                con = xmlrcp.client.ServerProxy(get_con_string(server))
-                getattr(con,next_op[0])(*next_op[1])
-
-        if time.time() >= next_calc_time and current_time - start_time < 20:
-            calculation_op    = calculations[random.randint(0,len(calculations)-2)]
-            calculation_value = random.randint(1, 10)
-            calculations_queue.append((calculation_op, [calculation_value]))
-
-            next_calc_time    = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
-        current_time = time.time()
-
 
 def start_token_ring(server_func):
     while True:
         if len(server_func.known_server_addr) > 0:
-            print("Got servers, need token...")
             if server_func.got_token:
-                print("Got token from: {}".format(server_func.got_token_from))
                 time.sleep(5)
                 next_server, position = get_next_server(server_func)
                 if next_server is None:
                     # i.e. wait for new servers
                     continue
-                print("Next server {}".format(next_server))
-                print("Do important calculations!")
-                # pass token to next server
-                print("Pass on token")
                 try:
                     con = xmlrpc.client.ServerProxy(
                         get_con_string(next_server))
                     con.ServerFunctions.acceptToken(str(options.port))
+                    print("Token passed to {}".format(next_server))
                 except:
                     print("ERROR:\nTrying again in a sec")
                     time.sleep(1)
@@ -149,9 +101,7 @@ if options.token_ring:
         server_func.got_token = True
     token_ring_thread = threading.Thread(
         target=start_token_ring,
-        args=(
-            server_func,
-        ))
+        args=(server_func,))
     token_ring_thread.daemon = True
     token_ring_thread.start()
 
