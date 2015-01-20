@@ -45,49 +45,21 @@ def print_own_ip_addresses(port):
 
     print("----------------------------------------")
 
-def generate_calculations(calculations_queue):
-    calculations = ["+", "-", "*", "/"]
-#    rnd_time_lower_bound = 0.05
-#    rnd_time_upper_bound = 0.5
-    rnd_time_lower_bound = 0.5
-    rnd_time_upper_bound = 1
-    total_running_time = 20
-    min_wait_time = 0.001
-    start_time = time.time()
-    current_time = time.time()
-
-    # calculate next instance in time, that a calculation should be added
-    next_calc_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
-    while current_time - start_time < 20 or len(calculations_queue)>0:
-        time.sleep(min_wait_time)
-        if time.time() >= next_calc_time and current_time - start_time < 20:
-            calculation_op = random.sample(calculations,1)
-            calculation_value = random.randint(1, 10)
-            calculations_queue.append([calculation_op, calculation_value])
-            next_calc_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
-            print("New calculation: {}".format((calculation_op,calculation_value)))
-        current_time = time.time()
-
 
 def start_token_ring(server_func):
     while True:
         if len(server_func.known_server_addr) > 0:
-            print("Got servers, need token...")
             if server_func.got_token:
-                print("Got token from: {}".format(server_func.got_token_from))
                 time.sleep(5)
                 next_server, position = get_next_server(server_func)
                 if next_server is None:
                     # i.e. wait for new servers
                     continue
-                print("Next server {}".format(next_server))
-                print("Do important calculations!")
-                # pass token to next server
-                print("Pass on token")
                 try:
                     con = xmlrpc.client.ServerProxy(
                         get_con_string(next_server))
                     con.ServerFunctions.acceptToken(str(options.port))
+                    print("Token passed to {}".format(next_server))
                 except:
                     print("ERROR:\nTrying again in a sec")
                     time.sleep(1)
@@ -95,7 +67,6 @@ def start_token_ring(server_func):
                 # give up token when sure someone else got it
                 server_func.got_token = False
         time.sleep(1)
-
 
 def connect_to_server(connection, server_func):
     connection = translate_localhost(connection)
@@ -129,9 +100,7 @@ if options.token_ring:
         server_func.got_token = True
     token_ring_thread = threading.Thread(
         target=start_token_ring,
-        args=(
-            server_func,
-        ))
+        args=(server_func,))
     token_ring_thread.daemon = True
     token_ring_thread.start()
 
@@ -155,16 +124,15 @@ try:
 
         if re.search('connect', user_input):
             mo = re.search('([.\w]+):(\d+)', user_input)
-            print("Matched String >{}< -- >{}< -- >{}<".format(mo.group(0), mo.group(1), mo.group(2)))
             # match for 'localhost' or an ip4 address
-            if ip4_addr_re.search(mo.group(1)) or re.match('localhost',mo.group(1)):
-                connect_to_server(mo.group(0),server_func)
+            if ip4_addr_re.search(mo.group(1)) or re.match( 'localhost', mo.group(1)):
+                connect_to_server(mo.group(0), server_func)
         if re.search('list', user_input):
             server_func.list()
         if re.match('\s*start',user_input):
             initial_value = float(random.randint(1,10))
-            calc_queue = [('start',initial_value)]
-            calc_thread = threading.Thread(target=generate_calculations,args=(calc_queue,))
+            calc_queue = [('ServerFunction.calculationStart',[initial_value])]
+            calc_thread = threading.Thread(target=generate_calculations,args=(server_func,calc_queue))
             calc_thread.daemon = True
             calc_thread.start()
 
