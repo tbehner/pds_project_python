@@ -58,7 +58,7 @@ def get_next_server(server_func,position=None):
     return (next_server, next_server_idx)
 
 def generate_calculations(server_func, calculations_queue):
-    calculations = [ "ServerFunction.calculationSum", "ServerFunction.calculationSubtract", "ServerFunction.calculationMultiply", "ServerFunction.calculationDivide", "ServerFunction.calculationStart" ]
+    calculations = [ "ServerFunctions.calculationSum", "ServerFunctions.calculationSubtract", "ServerFunctions.calculationMultiply", "ServerFunctions.calculationDivide", "ServerFunctions.calculationStart" ]
 #    rnd_time_lower_bound = 0.05
 #    rnd_time_upper_bound = 0.5
     rnd_time_lower_bound = 0.5
@@ -85,7 +85,8 @@ def generate_calculations(server_func, calculations_queue):
             elif re.search("Divide",next_op[0]):
                 server_func.calculationDivide(next_op[1][0])
 
-            print("Local restult: {}".format(server_func.calculated_value))
+            #print("Local restult: {}".format(server_func.calculated_value))
+            print(" = {}".format(server_func.calculated_value))
 
             for server in server_func.known_server_addr:
                 con = xmlrpc.client.ServerProxy(get_con_string(server))
@@ -95,7 +96,7 @@ def generate_calculations(server_func, calculations_queue):
         if time.time() >= next_calc_time and current_time - start_time < 20:
             calculation_op    = calculations[random.randint(0,len(calculations)-2)]
             calculation_value = random.randint(1, 10)
-            calculations_queue.append((calculation_op, [calculation_value]))
+            calculations_queue.append((calculation_op, [int(calculation_value)]))
 
             next_calc_time    = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
         current_time = time.time()
