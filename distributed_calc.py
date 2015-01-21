@@ -50,7 +50,7 @@ def start_token_ring(server_func):
     while True:
         if len(server_func.known_server_addr) > 0:
             if server_func.got_token:
-                time.sleep(5)
+                time.sleep(2)
                 next_server, position = get_next_server(server_func)
                 if next_server is None:
                     # i.e. wait for new servers
@@ -59,7 +59,7 @@ def start_token_ring(server_func):
                     con = xmlrpc.client.ServerProxy(
                         get_con_string(next_server))
                     con.ServerFunctions.acceptToken(str(options.port))
-                    print("Token passed to {}".format(next_server))
+                    #print("Token")
                 except:
                     print("ERROR:\nTrying again in a sec")
                     time.sleep(1)
@@ -131,7 +131,7 @@ try:
             server_func.list()
         if re.match('\s*start',user_input):
             initial_value = float(random.randint(1,10))
-            calc_queue = [('ServerFunction.calculationStart',[initial_value])]
+            calc_queue = [('ServerFunctions.calculationStart',[int(initial_value)])]
             calc_thread = threading.Thread(target=generate_calculations,args=(server_func,calc_queue))
             calc_thread.daemon = True
             calc_thread.start()
