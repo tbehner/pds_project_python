@@ -78,7 +78,7 @@ class ServerFunctions:
         return 1
 
     def acceptToken(self,client_port):
-        print("I got the token!")
+        #print("Token x")
         self.got_token = True
         self.got_token_from = get_addr_string(ChattyRequestHandler.log[-1][0],client_port)
         return 1
@@ -96,21 +96,25 @@ class ServerFunctions:
 
     def calculationSum(self,value):
         self.calculated_value = self.calculated_value + value
-        print("Calculated value: {}".format(self.calculated_value))
+        #print("Calculated value: {}".format(self.calculated_value))
+        print("+ {}".format(value), end="")
         return 0
 
     def calculationSubtract(self,value):
         self.calculated_value = self.calculated_value - value
-        print("Calculated value: {}".format(self.calculated_value))
+        #print("Calculated value: {}".format(self.calculated_value))
+        print("- {}".format(value), end="")
         return 0
 
     def calculationMultiply(self,value):
         self.calculated_value = self.calculated_value * value
-        print("Calculated value: {}".format(self.calculated_value))
+        #print("Calculated value: {}".format(self.calculated_value))
+        print("* {}".format(value), end="")
         return 0
 
     def calculationDivide(self,value):
         self.calculated_value = self.calculated_value / value
-        print("Calculated value: {}".format(self.calculated_value))
+        #print("Calculated value: {}".format(self.calculated_value))
+        print("/ {}".format(value), end="")
         return 0
 
