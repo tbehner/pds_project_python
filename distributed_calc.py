@@ -50,23 +50,27 @@ def start_token_ring(server_func):
     while True:
         if len(server_func.known_server_addr) > 0:
             if server_func.got_token:
-                time.sleep(2)
+                if server_func.keep_token == True:
+                    continue
+                server_func.token_on_way_to_next_server = True
+                time.sleep(0.05)
                 next_server, position = get_next_server(server_func)
                 if next_server is None:
                     # i.e. wait for new servers
+                    server_func.got_token = True
                     continue
                 try:
-                    con = xmlrpc.client.ServerProxy(
-                        get_con_string(next_server))
+                    con = xmlrpc.client.ServerProxy( get_con_string(next_server))
                     con.ServerFunctions.acceptToken(str(options.port))
-                    #print("Token")
                 except:
                     print("ERROR:\nTrying again in a sec")
-                    time.sleep(1)
+                    server_func.got_token = True
+                    time.sleep(0.001)
                     continue
                 # give up token when sure someone else got it
                 server_func.got_token = False
-        time.sleep(1)
+                server_func.token_on_way_to_next_server = False
+        time.sleep(0.001)
 
 def connect_to_server(connection, server_func):
     connection = translate_localhost(connection)
@@ -78,7 +82,7 @@ def connect_to_server(connection, server_func):
 """
 start server thread
 """
-server = SimpleXMLRPCServer(("", options.port), ChattyRequestHandler)
+server = SimpleXMLRPCServer(("", options.port), ChattyRequestHandler,logRequests=False)
 # reset port, in case the port was arbitrary set by system
 options.port = server.socket.getsockname()[1]
 server_func = ServerFunctions(options.port)
@@ -136,16 +140,16 @@ try:
             calc_thread.daemon = True
             calc_thread.start()
 
-# wait until shutdown
+    # wait until shutdown
     server_thread.join()
 except KeyboardInterrupt:
+    print("Final result {}".format(server_func.calculated_value))
+    print("Total number of computations: {}".format(server_func.total_computations))
     print("Shutting down...")
     while server_func.got_token:
         time.sleep(5)
 
-    print(
-        "Unregister in complete list {}".format(
-            server_func.known_server_addr))
+    print( "Unregister in complete list {}".format(server_func.known_server_addr))
     for s in server_func.known_server_addr:
         print("Unregister at server {}".format(s))
         con = xmlrpc.client.ServerProxy(get_con_string(s))

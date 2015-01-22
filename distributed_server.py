@@ -10,9 +10,17 @@ from utility_functions import *
 
 class ChattyRequestHandler(SimpleXMLRPCRequestHandler):
     log = []
+    connection_blocked = False
     def __init__(self, request, client_address, server):
+        while ChattyRequestHandler.connection_blocked:
+            time.sleep(0.001)
+        ChattyRequestHandler.connection_blocked = True
         ChattyRequestHandler.log.append(client_address)
         SimpleXMLRPCRequestHandler.__init__(self, request, client_address, server)
+
+    def do_POST(self):
+        # call do_POST of super class
+        super(ChattyRequestHandler,self).do_POST()
 
 class ServerFunctions:
     def __init__(self, own_port):
@@ -24,6 +32,9 @@ class ServerFunctions:
         self.calculated_value  = None
         self.calc_thread       = None
         self.calc_queue        = []
+        self.keep_token        = False
+        self.token_on_way_to_next_server = False
+        self.total_computations = 0
 
     def _dispatch(self, method, params):
         method_name = str(method)
@@ -54,6 +65,7 @@ class ServerFunctions:
         else:
             print("Bye from unknown server{}".format(server))
         print("Updated server list {}".format(self.known_server_addr))
+        ChattyRequestHandler.connection_blocked = False
         return 1
 
     def registerRemoteServer(self,client_port):
@@ -63,10 +75,10 @@ class ServerFunctions:
             self.known_server_addr.append(server_addr)
         self.__populate_servers()
         print("New Server list: {}".format(self.known_server_addr))
+        ChattyRequestHandler.connection_blocked = False
         return 1
 
     def refreshRemoteServerList(self,server_list):
-        print("Get new server list {}".format(server_list))
         for i in range(len(server_list)):
             if i==0:
                 server = get_addr_string(ChattyRequestHandler.log[-1][0], server_list[i])
@@ -74,47 +86,53 @@ class ServerFunctions:
                 server = server_list[i]
             if server not in self.known_server_addr:
                 self.known_server_addr.append(server)
-        print("New Server list: {}".format(self.known_server_addr))
+        ChattyRequestHandler.connection_blocked = False
         return 1
 
     def acceptToken(self,client_port):
-        #print("Token x")
         self.got_token = True
         self.got_token_from = get_addr_string(ChattyRequestHandler.log[-1][0],client_port)
+        ChattyRequestHandler.connection_blocked = False
         return 1
 
     def list(self):
         for server_addr in self.known_server_addr:
             print(server_addr)
 
-    def calculationStart(self,value):
+    def calculationStart(self,value,start_thread=True):
         self.calculated_value = value
-        calc_thread = threading.Thread(target=generate_calculations,args=(self,self.calc_queue))
-        calc_thread.daemon = True
-        calc_thread.start()
-        return 0
+        if start_thread:
+            calc_thread = threading.Thread(target=generate_calculations,args=(self,self.calc_queue))
+            calc_thread.daemon = True
+            calc_thread.start()
+            ChattyRequestHandler.connection_blocked = False
+        return self.calculated_value
 
     def calculationSum(self,value):
         self.calculated_value = self.calculated_value + value
-        #print("Calculated value: {}".format(self.calculated_value))
-        print("+ {}".format(value), end="")
-        return 0
+        print("+ {} = {}".format(value, self.calculated_value))
+        self.total_computations = self.total_computations + 1
+        ChattyRequestHandler.connection_blocked = False
+        return self.calculated_value
 
     def calculationSubtract(self,value):
         self.calculated_value = self.calculated_value - value
-        #print("Calculated value: {}".format(self.calculated_value))
-        print("- {}".format(value), end="")
-        return 0
+        print("- {} = {}".format(value, self.calculated_value))
+        self.total_computations = self.total_computations + 1
+        ChattyRequestHandler.connection_blocked = False
+        return self.calculated_value
 
     def calculationMultiply(self,value):
         self.calculated_value = self.calculated_value * value
-        #print("Calculated value: {}".format(self.calculated_value))
-        print("* {}".format(value), end="")
-        return 0
+        print("* {} = {}".format(value, self.calculated_value))
+        self.total_computations = self.total_computations + 1
+        ChattyRequestHandler.connection_blocked = False
+        return self.calculated_value
 
     def calculationDivide(self,value):
         self.calculated_value = self.calculated_value / value
-        #print("Calculated value: {}".format(self.calculated_value))
-        print("/ {}".format(value), end="")
-        return 0
+        print("/ {} = {}".format(value, self.calculated_value))
+        self.total_computations = self.total_computations + 1
+        ChattyRequestHandler.connection_blocked = False
+        return self.calculated_value
 
