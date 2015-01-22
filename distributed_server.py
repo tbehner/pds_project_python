@@ -19,6 +19,8 @@ class ChattyRequestHandler(SimpleXMLRPCRequestHandler):
         SimpleXMLRPCRequestHandler.__init__(self, request, client_address, server)
 
     def do_POST(self):
+        while not ChattyRequestHandler.connection_blocked:
+            time.sleep(0.001)
         # call do_POST of super class
         super(ChattyRequestHandler,self).do_POST()
 
