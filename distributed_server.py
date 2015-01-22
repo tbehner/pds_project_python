@@ -12,20 +12,20 @@ class ChattyRequestHandler(SimpleXMLRPCRequestHandler):
     log = []
     connection_blocked = False
     def __init__(self, request, client_address, server):
-        while ChattyRequestHandler.connection_blocked:
-            time.sleep(0.001)
-        ChattyRequestHandler.connection_blocked = True
+        #while ChattyRequestHandler.connection_blocked:
+        #    time.sleep(0.001)
+        #ChattyRequestHandler.connection_blocked = True
         ChattyRequestHandler.log.append(client_address)
         SimpleXMLRPCRequestHandler.__init__(self, request, client_address, server)
 
     def do_POST(self):
-        while not ChattyRequestHandler.connection_blocked:
-            time.sleep(0.001)
+        #while not ChattyRequestHandler.connection_blocked:
+        #    time.sleep(0.001)
         # call do_POST of super class
         super(ChattyRequestHandler,self).do_POST()
 
 class ServerFunctions:
-    def __init__(self, own_port):
+    def __init__(self, own_port, chatty_token=False):
         self.known_server_addr = []
         self.got_token         = False
         self.got_token_from    = None
@@ -37,6 +37,7 @@ class ServerFunctions:
         self.keep_token        = False
         self.token_on_way_to_next_server = False
         self.total_computations = 0
+        self.chatty_token       = chatty_token
 
     def _dispatch(self, method, params):
         method_name = str(method)
@@ -95,16 +96,18 @@ class ServerFunctions:
         self.got_token = True
         self.got_token_from = get_addr_string(ChattyRequestHandler.log[-1][0],client_port)
         ChattyRequestHandler.connection_blocked = False
+        if self.chatty_token:
+            print("Got token from {}".format(self.got_token_from))
         return 1
 
     def list(self):
         for server_addr in self.known_server_addr:
             print(server_addr)
 
-    def calculationStart(self,value,start_thread=True):
+    def calculationStart(self,value,start_thread=True,timing='normal'):
         self.calculated_value = value
         if start_thread:
-            calc_thread = threading.Thread(target=generate_calculations,args=(self,self.calc_queue))
+            calc_thread = threading.Thread(target=generate_calculations,args=(self,self.calc_queue,translate_timing_to_tuple(timing)[0:2],))
             calc_thread.daemon = True
             calc_thread.start()
             ChattyRequestHandler.connection_blocked = False

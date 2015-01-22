@@ -4,6 +4,18 @@ import time
 import re
 import random
 
+def sec_to_msec(sec):
+    return sec/1000.0
+
+def translate_timing_to_tuple(timing_string):
+    if re.match('[Ss]low',timing_string):
+        return (sec_to_msec(20), sec_to_msec(50), sec_to_msec(50))
+    elif re.match('[Nn]ormal',timing_string):
+        return (sec_to_msec(500), sec_to_msec(2000), sec_to_msec(100))
+    elif re.match('[Ff]ast',timing_string):
+        return (sec_to_msec(2000), sec_to_msec(5000), sec_to_msec(200))
+    raise ValueError
+
 def translate_localhost(ip_string):
     ip_addr, port = re.split(':',ip_string)
     if re.match('localhost',ip_addr):
@@ -11,13 +23,10 @@ def translate_localhost(ip_string):
     else:
         return ip_string
 
-
 def start_serving(server):
     try:
         print("Server started...")
         server.serve_forever()
-        # send information about all known servers to the new one
-        # send the information of the new server to all other known servers
     except:
         print("Not foreseen shutdown")
     print("... and offline!")
@@ -61,10 +70,14 @@ def get_next_server(server_func,position=None):
 
     return (next_server, next_server_idx)
 
-def generate_calculations(server_func, calculations_queue):
-    calculations = [ "ServerFunctions.calculationSum", "ServerFunctions.calculationSubtract", "ServerFunctions.calculationMultiply", "ServerFunctions.calculationDivide", "ServerFunctions.calculationStart" ]
-    rnd_time_lower_bound = 0.02
-    rnd_time_upper_bound = 0.05
+def generate_calculations(server_func, calculations_queue, timing_tuple):
+    calculations = [ "ServerFunctions.calculationSum",
+            "ServerFunctions.calculationSubtract",
+            "ServerFunctions.calculationMultiply",
+            "ServerFunctions.calculationDivide",
+            "ServerFunctions.calculationStart" ]
+    rnd_time_lower_bound = timing_tuple[0]
+    rnd_time_upper_bound = timing_tuple[1]
     total_running_time = 20
     min_wait_time = 0.001
     start_time = time.time()
