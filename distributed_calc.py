@@ -58,7 +58,7 @@ def start_token_ring(server_func,sleep_duration):
                     time.sleep(0.001)
                     continue
 
-                give up token when sure someone else got it
+                # give up token when sure someone else got it
                 server_func.got_token = False
                 server_func.token_on_way_to_next_server = False
         time.sleep(0.001)
