@@ -9,11 +9,11 @@ def sec_to_msec(sec):
 
 def translate_timing_to_tuple(timing_string):
     if re.match('[Ss]low',timing_string):
-        return (sec_to_msec(20), sec_to_msec(50), sec_to_msec(50))
+        return (sec_to_msec(2000), sec_to_msec(5000), sec_to_msec(200))
     elif re.match('[Nn]ormal',timing_string):
         return (sec_to_msec(500), sec_to_msec(2000), sec_to_msec(100))
     elif re.match('[Ff]ast',timing_string):
-        return (sec_to_msec(2000), sec_to_msec(5000), sec_to_msec(200))
+        return (sec_to_msec(20), sec_to_msec(50), sec_to_msec(50))
     raise ValueError
 
 def translate_localhost(ip_string):
