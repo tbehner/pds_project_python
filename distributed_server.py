@@ -44,6 +44,8 @@ class ServerFunctions:
         method_name_parts = method_name.split(".")
         method_name = method_name_parts[-1]
         func_output = getattr(ServerFunctions, method_name)(self, *params)
+        if method_name.startswith("calc"):
+            print("")
         return func_output
 
     def __populate_servers(self):
@@ -115,28 +117,28 @@ class ServerFunctions:
 
     def calculationSum(self,value):
         self.calculated_value = self.calculated_value + value
-        print("+ {} = {}".format(value, self.calculated_value))
+        print("+ {} = {}".format(value, self.calculated_value),end="")
         self.total_computations = self.total_computations + 1
         ChattyRequestHandler.connection_blocked = False
         return self.calculated_value
 
     def calculationSubtract(self,value):
         self.calculated_value = self.calculated_value - value
-        print("- {} = {}".format(value, self.calculated_value))
+        print("- {} = {}".format(value, self.calculated_value),end="")
         self.total_computations = self.total_computations + 1
         ChattyRequestHandler.connection_blocked = False
         return self.calculated_value
 
     def calculationMultiply(self,value):
         self.calculated_value = self.calculated_value * value
-        print("* {} = {}".format(value, self.calculated_value))
+        print("* {} = {}".format(value, self.calculated_value),end="")
         self.total_computations = self.total_computations + 1
         ChattyRequestHandler.connection_blocked = False
         return self.calculated_value
 
     def calculationDivide(self,value):
         self.calculated_value = self.calculated_value / value
-        print("/ {} = {}".format(value, self.calculated_value))
+        print("/ {} = {}".format(value, self.calculated_value),end="")
         self.total_computations = self.total_computations + 1
         ChattyRequestHandler.connection_blocked = False
         return self.calculated_value

@@ -91,7 +91,6 @@ def generate_calculations(server_func, calculations_queue, timing_tuple):
             server_func.keep_token = True
             next_op = calculations_queue.pop(0)
 
-            print("Local: ", end="")
             if re.search("Start",next_op[0]):
                 server_func.calculationStart(next_op[1][0],False)
             elif re.search("Sum",next_op[0]):
@@ -102,6 +101,7 @@ def generate_calculations(server_func, calculations_queue, timing_tuple):
                 server_func.calculationMultiply(next_op[1][0])
             elif re.search("Divide",next_op[0]):
                 server_func.calculationDivide(next_op[1][0])
+            print(" (local)")
 
             for server in server_func.known_server_addr:
                 entry_time = time.time()*1000
