@@ -12,15 +12,15 @@ class ChattyRequestHandler(SimpleXMLRPCRequestHandler):
     log = []
     connection_blocked = False
     def __init__(self, request, client_address, server):
-        #while ChattyRequestHandler.connection_blocked:
-        #    time.sleep(0.001)
-        #ChattyRequestHandler.connection_blocked = True
+        while ChattyRequestHandler.connection_blocked:
+            time.sleep(0.001)
+        ChattyRequestHandler.connection_blocked = True
         ChattyRequestHandler.log.append(client_address)
         SimpleXMLRPCRequestHandler.__init__(self, request, client_address, server)
 
     def do_POST(self):
-        #while not ChattyRequestHandler.connection_blocked:
-        #    time.sleep(0.001)
+        while not ChattyRequestHandler.connection_blocked:
+            time.sleep(0.001)
         # call do_POST of super class
         super(ChattyRequestHandler,self).do_POST()
 
@@ -109,7 +109,7 @@ class ServerFunctions:
     def calculationStart(self,value,start_thread=True,timing='normal'):
         self.calculated_value = value
         if start_thread:
-            calc_thread = threading.Thread(target=generate_calculations,args=(self,self.calc_queue,translate_timing_to_tuple(timing)[0:2],))
+            calc_thread = threading.Thread(target=generate_calculations,args=(self,self.calc_queue,translate_timing_to_dict(timing),))
             calc_thread.daemon = True
             calc_thread.start()
             ChattyRequestHandler.connection_blocked = False

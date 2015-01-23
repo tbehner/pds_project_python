@@ -10,6 +10,7 @@ from utility_functions import *
 from netifaces import AF_INET
 import netifaces as ni
 import random
+random.seed()
 
 parser = OptionParser()
 parser.add_option( "-c", "--connect", dest="server_con", help="connect to server with the given ip address and port number", metavar="ADDRESS:PORT")
@@ -32,6 +33,7 @@ def print_own_ip_addresses(port):
 
 def start_token_ring(server_func,sleep_duration):
     while True:
+        time.sleep(0.001)
         if len(server_func.known_server_addr) > 0:
             if server_func.got_token:
                 if server_func.keep_token == True:
@@ -61,7 +63,6 @@ def start_token_ring(server_func,sleep_duration):
                 # give up token when sure someone else got it
                 server_func.got_token = False
                 server_func.token_on_way_to_next_server = False
-        time.sleep(0.001)
 
 def connect_to_server(connection, server_func):
     connection = translate_localhost(connection)
@@ -95,7 +96,7 @@ if options.token_ring:
         server_func.got_token = True
     token_ring_thread = threading.Thread(
         target=start_token_ring,
-        args=(server_func,translate_timing_to_tuple(options.timing)[2],))
+        args=(server_func,translate_timing_to_dict(options.timing)['token_hold_time'],))
     token_ring_thread.daemon = True
     token_ring_thread.start()
 
@@ -127,7 +128,7 @@ try:
         if re.match('\s*start',user_input):
             initial_value = float(random.randint(1,10))
             calc_queue = [('ServerFunctions.calculationStart',[int(initial_value)])]
-            calc_thread = threading.Thread(target=generate_calculations,args=(server_func,calc_queue,translate_timing_to_tuple(options.timing)[0:2],))
+            calc_thread = threading.Thread(target=generate_calculations,args=(server_func,calc_queue,translate_timing_to_dict(options.timing),))
             calc_thread.daemon = True
             calc_thread.start()
 

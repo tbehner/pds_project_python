@@ -3,17 +3,24 @@ import xmlrpc.client
 import time
 import re
 import random
+random.seed()
 
 def sec_to_msec(sec):
     return sec/1000.0
 
-def translate_timing_to_tuple(timing_string):
+def translate_timing_to_dict(timing_string):
     if re.match('[Ss]low',timing_string):
-        return (sec_to_msec(2000), sec_to_msec(5000), sec_to_msec(200))
+        return { 'next_calc_lower_bound' : sec_to_msec(2000),
+                 'next_calc_upper_bound' : sec_to_msec(5000),
+                 'token_hold_time'       : sec_to_msec(200) }
     elif re.match('[Nn]ormal',timing_string):
-        return (sec_to_msec(500), sec_to_msec(2000), sec_to_msec(100))
+        return { 'next_calc_lower_bound' : sec_to_msec(500),
+                 'next_calc_upper_bound' : sec_to_msec(2000),
+                 'token_hold_time'       : sec_to_msec(100) }
     elif re.match('[Ff]ast',timing_string):
-        return (sec_to_msec(20), sec_to_msec(50), sec_to_msec(50))
+        return { 'next_calc_lower_bound' : sec_to_msec(20),
+                 'next_calc_upper_bound' : sec_to_msec(50),
+                 'token_hold_time'       : sec_to_msec(50) }
     raise ValueError
 
 def translate_localhost(ip_string):
@@ -70,23 +77,31 @@ def get_next_server(server_func,position=None):
 
     return (next_server, next_server_idx)
 
-def generate_calculations(server_func, calculations_queue, timing_tuple):
+def generate_calculations(server_func, calculations_queue, timing_dict):
     calculations = [ "ServerFunctions.calculationSum",
             "ServerFunctions.calculationSubtract",
             "ServerFunctions.calculationMultiply",
             "ServerFunctions.calculationDivide",
             "ServerFunctions.calculationStart" ]
-    rnd_time_lower_bound = timing_tuple[0]
-    rnd_time_upper_bound = timing_tuple[1]
+    rnd_time_lower_bound = timing_dict['next_calc_lower_bound']
+    rnd_time_upper_bound = timing_dict['next_calc_upper_bound']
     total_running_time = 20
     min_wait_time = 0.001
     start_time = time.time()
     current_time = time.time()
-    iteration = 0
 
     next_calc_time = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
     while current_time - start_time < total_running_time or len(calculations_queue)>0:
         time.sleep(min_wait_time)
+
+        # generate new calculations
+        if time.time() >= next_calc_time:
+            calculation_op    = calculations[random.randint(0,len(calculations)-2)]
+            calculation_value = random.randint(1, 10)
+            calculations_queue.append((calculation_op, [int(calculation_value)]))
+            next_calc_time    = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
+
+        # send calculations if got token
         if server_func.got_token and not server_func.token_on_way_to_next_server and len(calculations_queue) > 0:
             server_func.keep_token = True
             next_op = calculations_queue.pop(0)
@@ -108,14 +123,9 @@ def generate_calculations(server_func, calculations_queue, timing_tuple):
                 con = xmlrpc.client.ServerProxy(get_con_string(server))
                 ret_val = getattr(con,next_op[0])(*next_op[1])
                 exit_time = time.time()*1000
-                iteration = iteration + 1
 
             server_func.keep_token = False
 
-        if time.time() >= next_calc_time and current_time - start_time < 20:
-            calculation_op    = calculations[random.randint(0,len(calculations)-2)]
-            calculation_value = random.randint(1, 10)
-            calculations_queue.append((calculation_op, [int(calculation_value)]))
-            next_calc_time    = random.uniform(rnd_time_lower_bound, rnd_time_upper_bound) + time.time()
+
         current_time = time.time()
 
