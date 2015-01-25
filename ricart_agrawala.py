@@ -1,5 +1,3 @@
-from pip._vendor.distlib._backport.tarfile import calc_chksums
-
 __author__ = 'AMelnyk'
 import xmlrpc.client
 import time
@@ -15,36 +13,35 @@ class RicartAgrawalaAlgorithm:
         self.run_thread = None
 
     def send_request(self):
-        self.server_functions.received_replies_servers = []
-        # increment clock counter
-        self.server_functions.clock_timestamp += 1
-        # send request to all servers
-        for server in self.server_functions.known_server_addr:
-            con = xmlrpc.client.ServerProxy(utils.get_con_string(server))
-            print("Send request to {}".format(server))
-            thread = threading.Thread(target=con.requestAccess,
-                                      args=(self.server_functions.id, self.server_functions.clock_timestamp),
-                                      daemon=True,
-                                      name="send_request")
-            thread.start()
-        self.server_functions.request_sent = True
+        if self.server_functions.calc_queue and not self.server_functions.request_sent:
+            self.server_functions.received_replies_servers = []
+            # increment clock counter
+            self.server_functions.clock_timestamp += 1
+            # send request to all servers
+            for server in self.server_functions.known_server_addr:
+                con = xmlrpc.client.ServerProxy(utils.get_con_string(server))
+                print("Send request to {}".format(server))
+                thread = threading.Thread(target=con.requestAccess,
+                                          args=(self.server_functions.id, self.server_functions.clock_timestamp),
+                                          daemon=True,
+                                          name="send_request")
+                thread.start()
+            self.server_functions.request_sent = True
 
-        # check if we got replies from all servers, the result set must be empty
-        while set(self.server_functions.known_server_addr) - set(self.server_functions.received_replies_servers):
-            # wait
-            time.sleep(0.01)
-        print("Received all replies")
-        # we got all replies, perform the calculation
-        if self.server_functions.calc_queue:
+            # check if we got replies from all servers, the result set must be empty
+            while set(self.server_functions.known_server_addr) - set(self.server_functions.received_replies_servers):
+                # wait
+                time.sleep(0.01)
+            print("Received all replies")
+            # we got all replies, perform the calculation
             self.perform_own_calculation()
-        else:
-            print("No operation in the queue")
         self.server_functions.request_sent = False
 
     def perform_own_calculation(self):
         if self.server_functions.calc_queue:
             # we take the current length of the own calc queue as index, the number of operations to perform
             index = len(self.server_functions.calc_queue)
+            self.server_functions.clock_timestamp += 1
             for server in self.server_functions.known_server_addr:
                 con = xmlrpc.client.ServerProxy(utils.get_con_string(server))
                 # tell others to perform my calculations
@@ -82,8 +79,8 @@ class RicartAgrawalaAlgorithm:
                         "ServerFunctions.calculationMultiply",
                         "ServerFunctions.calculationDivide",
                         "ServerFunctions.calculationStart"]
-        rnd_time_lower_bound = utils.sec_to_msec(10)
-        rnd_time_upper_bound = utils.sec_to_msec(100)
+        rnd_time_lower_bound = utils.sec_to_msec(800)
+        rnd_time_upper_bound = utils.sec_to_msec(1000)
         total_running_time = 20
         start_time = time.time()
         operation_count = 1

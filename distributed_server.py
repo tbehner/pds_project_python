@@ -153,23 +153,21 @@ class ServerFunctions:
 
     def requestAccess(self, request_site, request_clock):
         print("Received request from {}".format(request_site))
-        local_clock = self.clock_timestamp
-        self._sync_clock(request_clock)
         # are we interested in the critical section and do we have higher priority?
-        if len(self.calc_queue) != 0 and local_clock < request_clock:
+        if self.request_sent or (len(self.calc_queue) != 0 and self.clock_timestamp < request_clock):
             # add server to reply list
             if request_site not in self.reply_to_server_queue:
                 self.reply_to_server_queue.append(request_site)
                 # otherwise send OK reply
         else:
             self.sendReply(request_site)
+        self._sync_clock(request_clock)
         ChattyRequestHandler.connection_blocked = False
         return 1
 
     def sendReply(self, request_site):
         con = xmlrpc.client.ServerProxy(get_con_string(request_site))
-        print("Send reply to {}".format(request_site))
-        self.clock_timestamp += 1
+        print("Send OK reply to {}".format(request_site))
         con.replyOK(self.id, self.clock_timestamp)
         ChattyRequestHandler.connection_blocked = False
         return 1
@@ -200,9 +198,8 @@ class ServerFunctions:
         ChattyRequestHandler.connection_blocked = False
         return 1
 
-
     def performRemoteCalculations(self, index, server):
-        print("Perfoming operations of {}".format(server))
+        print("Perfoming remote operations of {}".format(server))
         if server in self.known_server_addr:
             self._performCalculations(index, self.known_servers_calc_queues[server])
         ChattyRequestHandler.connection_blocked = False
@@ -246,7 +243,6 @@ class ServerFunctions:
         # removed the peformed operations
         if len(queue) >= len(operations_to_perform):
             del queue[:len(operations_to_perform)]
-        ChattyRequestHandler.connection_blocked = False
 
     def start(self, value, starter):
         print("Set start value to {}".format(value))
