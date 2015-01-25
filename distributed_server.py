@@ -1,6 +1,5 @@
 from xmlrpc.server import SimpleXMLRPCRequestHandler
 import xmlrpc.client
-from pip import req
 from utility_functions import *
 import ricart_agrawala
 
