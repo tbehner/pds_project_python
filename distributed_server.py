@@ -154,20 +154,23 @@ class ServerFunctions:
     def requestAccess(self, request_site, request_clock):
         print("Received request from {}".format(request_site))
         # are we interested in the critical section and do we have higher priority?
-        if self.request_sent or (len(self.calc_queue) != 0 and self.clock_timestamp < request_clock):
+        local_clock = self.clock_timestamp
+        self._sync_clock(request_clock)
+        if self.request_sent or (len(self.calc_queue) != 0 and local_clock < request_clock):
             # add server to reply list
             if request_site not in self.reply_to_server_queue:
                 self.reply_to_server_queue.append(request_site)
                 # otherwise send OK reply
+
         else:
             self.sendReply(request_site)
-        self._sync_clock(request_clock)
         ChattyRequestHandler.connection_blocked = False
         return 1
 
     def sendReply(self, request_site):
         con = xmlrpc.client.ServerProxy(get_con_string(request_site))
         print("Send OK reply to {}".format(request_site))
+        self.clock_timestamp += 1
         con.replyOK(self.id, self.clock_timestamp)
         ChattyRequestHandler.connection_blocked = False
         return 1
@@ -175,12 +178,13 @@ class ServerFunctions:
     def replyOK(self, requesting_site, timestamp):
         print("Received OK from: {}".format(requesting_site))
         self.received_replies_servers.append(requesting_site)
+        self.clock_timestamp += 1
         self._sync_clock(timestamp)
         ChattyRequestHandler.connection_blocked = False
         return 1
 
     def _sync_clock(self, received_clock_timestamp):
-        print("Adjust clocktime - own time: {} received: {} | ". format(self.clock_timestamp, received_clock_timestamp), end="")
+        print("Sync clocktime - own time: {} received: {} | ". format(self.clock_timestamp, received_clock_timestamp), end="")
         self.clock_timestamp = max(self.clock_timestamp, received_clock_timestamp)+1
         print("New clocktime: {}".format(self.clock_timestamp))
 
@@ -194,12 +198,14 @@ class ServerFunctions:
 
     def performOwnCalculations(self, index):
         print("Performing own operations...")
+        self.clock_timestamp += 1
         self._performCalculations(index, self.calc_queue)
         ChattyRequestHandler.connection_blocked = False
         return 1
 
     def performRemoteCalculations(self, index, server):
         print("Perfoming remote operations of {}".format(server))
+        self.clock_timestamp += 1
         if server in self.known_server_addr:
             self._performCalculations(index, self.known_servers_calc_queues[server])
         ChattyRequestHandler.connection_blocked = False
@@ -249,6 +255,7 @@ class ServerFunctions:
         self.calculated_value = value
         # if we've started the thread, notify other nodes
         if starter:
+            self.clock_timestamp += 1
             for server in self.known_server_addr:
                 con = xmlrpc.client.ServerProxy(get_con_string(server))
                 print("Send start request to {}".format(server))

@@ -109,6 +109,7 @@ print("\"stop\" to shut down the server and stop the program")
 print("\"connect x.x.x.x:y\" to connect to server on ip x.x.x.x and port y")
 print("\"list\" to list the nodes in the network")
 print("\"start\" start the distributed calculation")
+print("\"rc\" to start distributed calculation with ricart agrawala strategy")
 print("----------------------------------------")
 
 ip4_addr_re = re.compile('(:?\d{1,4}\.){3}\d{1,4}')

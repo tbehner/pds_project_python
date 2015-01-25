@@ -31,7 +31,7 @@ class RicartAgrawalaAlgorithm:
             # check if we got replies from all servers, the result set must be empty
             while set(self.server_functions.known_server_addr) - set(self.server_functions.received_replies_servers):
                 # wait
-                time.sleep(0.01)
+                time.sleep(0.1)
             print("Received all replies")
             # we got all replies, perform the calculation
             self.perform_own_calculation()
@@ -41,7 +41,6 @@ class RicartAgrawalaAlgorithm:
         if self.server_functions.calc_queue:
             # we take the current length of the own calc queue as index, the number of operations to perform
             index = len(self.server_functions.calc_queue)
-            self.server_functions.clock_timestamp += 1
             for server in self.server_functions.known_server_addr:
                 con = xmlrpc.client.ServerProxy(utils.get_con_string(server))
                 # tell others to perform my calculations
@@ -62,6 +61,7 @@ class RicartAgrawalaAlgorithm:
         self.run_thread.start()
 
     def run(self):
+        self.server_functions.clock_timestamp += 1
         # init logical clock, take a value between 1 and 2* number of nodes in the network
         self.calculations_generator_thread = threading.Thread(target=self.generate_calculation, daemon=True,
                                                               name="calc_generator")
@@ -79,8 +79,8 @@ class RicartAgrawalaAlgorithm:
                         "ServerFunctions.calculationMultiply",
                         "ServerFunctions.calculationDivide",
                         "ServerFunctions.calculationStart"]
-        rnd_time_lower_bound = utils.sec_to_msec(800)
-        rnd_time_upper_bound = utils.sec_to_msec(1000)
+        rnd_time_lower_bound = utils.sec_to_msec(300)
+        rnd_time_upper_bound = utils.sec_to_msec(800)
         total_running_time = 20
         start_time = time.time()
         operation_count = 1
