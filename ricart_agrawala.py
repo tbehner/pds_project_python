@@ -15,67 +15,48 @@ class RicartAgrawalaAlgorithm:
         self.run_thread = None
 
     def send_request(self):
+        self.server_functions.received_replies_servers = []
         # increment clock counter
         self.server_functions.clock_timestamp += 1
         # send request to all servers
         for server in self.server_functions.known_server_addr:
             con = xmlrpc.client.ServerProxy(utils.get_con_string(server))
             print("Send request to {}".format(server))
-            thread = threading.Thread(target=con.requestAccess, args=(self.server_functions.id, self.server_functions.clock_timestamp), daemon=True,
+            thread = threading.Thread(target=con.requestAccess,
+                                      args=(self.server_functions.id, self.server_functions.clock_timestamp),
+                                      daemon=True,
                                       name="send_request")
             thread.start()
         self.server_functions.request_sent = True
+
         # check if we got replies from all servers, the result set must be empty
         while set(self.server_functions.known_server_addr) - set(self.server_functions.received_replies_servers):
             # wait
             time.sleep(0.01)
+        print("Received all replies")
         # we got all replies, perform the calculation
         if self.server_functions.calc_queue:
             self.perform_own_calculation()
+        else:
+            print("No operation in the queue")
         self.server_functions.request_sent = False
-        self.server_functions.received_replies_servers = []
-
-    def generate_calculation(self):
-        calculations = ["ServerFunctions.calculationSum",
-                        "ServerFunctions.calculationSubtract",
-                        "ServerFunctions.calculationMultiply",
-                        "ServerFunctions.calculationDivide",
-                        "ServerFunctions.calculationStart"]
-        rnd_time_lower_bound = utils.sec_to_msec(500)
-        rnd_time_upper_bound = utils.sec_to_msec(2000)
-        total_running_time = 20
-        min_wait_time = 0.001
-        start_time = time.time()
-        current_time = time.time()
-        operation_count = 1
-        while time.time() - start_time < total_running_time:
-            # generate new calculation
-            calculation_op = calculations[random.randint(0, len(calculations) - 2)]
-            calculation_value = random.randint(1, 9)
-            calculation = (calculation_op, [int(calculation_value)], operation_count)
-            print("Generated own calculation {} {}".format(calculation[0], calculation[1]))
-            self.server_functions.calc_queue.append(calculation)
-            # increment operation counter
-            operation_count += 1
-            # send calculations
-            for server in self.server_functions.known_server_addr:
-                con = xmlrpc.client.ServerProxy(utils.get_con_string(server))
-                con.queueOperation(self.server_functions.id, calculation)
-            time.sleep(random.uniform(rnd_time_lower_bound, rnd_time_upper_bound))
 
     def perform_own_calculation(self):
         if self.server_functions.calc_queue:
+            # we take the current length of the own calc queue as index, the number of operations to perform
             index = len(self.server_functions.calc_queue)
             for server in self.server_functions.known_server_addr:
                 con = xmlrpc.client.ServerProxy(utils.get_con_string(server))
+                # tell others to perform my calculations
                 con.performRemoteCalculations(index, self.server_functions.id)
             self.server_functions.performOwnCalculations(index)
             # send ok reply to other servers
             for server in self.server_functions.reply_to_server_queue:
                 self.server_functions.sendReply(server)
+                self.server_functions.reply_to_server_queue.remove(server)
 
     def start(self, starter):
-        self.server_functions.clock_timestamp = random.randint(1, 1000*len(self.server_functions.known_server_addr))
+        # self.server_functions.clock_timestamp = random.randint(1, 1000 * len(self.server_functions.known_server_addr))
         if starter:
             value = random.randint(1, 10)
             # generate a random value and start the calculation
@@ -94,3 +75,29 @@ class RicartAgrawalaAlgorithm:
                 self.send_request()
         self.calculations_generator_thread.join()
         print("Caclulation is over, result: {}".format(self.server_functions.calculated_value))
+
+    def generate_calculation(self):
+        calculations = ["ServerFunctions.calculationSum",
+                        "ServerFunctions.calculationSubtract",
+                        "ServerFunctions.calculationMultiply",
+                        "ServerFunctions.calculationDivide",
+                        "ServerFunctions.calculationStart"]
+        rnd_time_lower_bound = utils.sec_to_msec(10)
+        rnd_time_upper_bound = utils.sec_to_msec(100)
+        total_running_time = 20
+        start_time = time.time()
+        operation_count = 1
+        while time.time() - start_time < total_running_time:
+            # generate new calculation
+            calculation_op = calculations[random.randint(0, len(calculations) - 2)]
+            calculation_value = random.randint(1, 9)
+            calculation = (calculation_op, [int(calculation_value)], operation_count)
+            print("Generated own calculation {} {}".format(calculation[0], calculation[1]))
+            self.server_functions.calc_queue.append(calculation)
+            # increment operation counter
+            operation_count += 1
+            # send calculations
+            for server in self.server_functions.known_server_addr:
+                con = xmlrpc.client.ServerProxy(utils.get_con_string(server))
+                con.queueOperation(self.server_functions.id, calculation)
+            time.sleep(random.uniform(rnd_time_lower_bound, rnd_time_upper_bound))

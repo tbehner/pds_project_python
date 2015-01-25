@@ -1,5 +1,6 @@
 from xmlrpc.server import SimpleXMLRPCRequestHandler
 import xmlrpc.client
+from pip import req
 from utility_functions import *
 import ricart_agrawala
 
@@ -38,8 +39,8 @@ class ServerFunctions:
         self.token_on_way_to_next_server = False
         self.total_computations = 0
         self.chatty_token       = chatty_token
-        # logical clock timestamp
-        self.clock_timestamp = None
+        # logical clock timestamp, init value is 0, we will change it at the start of each calculation
+        self.clock_timestamp = 0
         self.reply_to_server_queue = []
         self.request_sent = False
         self.id = "{}:{}".format(self.own_adress, self.own_port)
@@ -150,33 +151,41 @@ class ServerFunctions:
         ChattyRequestHandler.connection_blocked = False
         return self.calculated_value
 
-    def requestAccess(self, request_site, timestamp):
-        # are we interested in the critical section and do we have higher priority (lower timestamp)?
-        if self.calc_queue and self.clock_timestamp < timestamp:
+    def requestAccess(self, request_site, request_clock):
+        print("Received request from {}".format(request_site))
+        local_clock = self.clock_timestamp
+        self._sync_clock(request_clock)
+        # are we interested in the critical section and do we have higher priority?
+        if len(self.calc_queue) != 0 and local_clock < request_clock:
             # add server to reply list
-            self.reply_to_server_queue.append(request_site)
-        # otherwise send OK reply
+            if request_site not in self.reply_to_server_queue:
+                self.reply_to_server_queue.append(request_site)
+                # otherwise send OK reply
         else:
             self.sendReply(request_site)
-        # adjust the clock
-        self.clock_timestamp = max(self.clock_timestamp, timestamp)+1
         ChattyRequestHandler.connection_blocked = False
         return 1
 
     def sendReply(self, request_site):
         con = xmlrpc.client.ServerProxy(get_con_string(request_site))
-        con.replyOK(self.own_adress, self.own_port, self.clock_timestamp)
-        if request_site in self.reply_to_server_queue:
-            self.reply_to_server_queue.remove(request_site)
+        print("Send reply to {}".format(request_site))
+        self.clock_timestamp += 1
+        con.replyOK(self.id, self.clock_timestamp)
         ChattyRequestHandler.connection_blocked = False
         return 1
 
-    def replyOK(self, requesting_site_adress, requestig_site_port, timestamp):
-        print("Received OK from: {}:{}".format(requesting_site_adress, requestig_site_port))
-        self.received_replies_servers.append("{}:{}".format(requesting_site_adress, requestig_site_port))
-        self.clock_timestamp = max(self.clock_timestamp, timestamp)+1
+    def replyOK(self, requesting_site, timestamp):
+        print("Received OK from: {}".format(requesting_site))
+        self.received_replies_servers.append(requesting_site)
+        self._sync_clock(timestamp)
         ChattyRequestHandler.connection_blocked = False
         return 1
+
+    def _sync_clock(self, received_clock_timestamp):
+        print("Adjust clocktime - own time: {} received: {} | ". format(self.clock_timestamp, received_clock_timestamp), end="")
+        self.clock_timestamp = max(self.clock_timestamp, received_clock_timestamp)+1
+        print("New clocktime: {}".format(self.clock_timestamp))
+
 
     def queueOperation(self, server, operation):
         if not server in self.known_servers_calc_queues:
