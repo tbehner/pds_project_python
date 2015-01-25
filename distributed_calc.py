@@ -109,7 +109,7 @@ print("\"stop\" to shut down the server and stop the program")
 print("\"connect x.x.x.x:y\" to connect to server on ip x.x.x.x and port y")
 print("\"list\" to list the nodes in the network")
 print("\"start\" start the distributed calculation")
-print("\"rc\" to start distributed calculation with ricart agrawala strategy")
+print("\"ra\" to start distributed calculation with ricart agrawala strategy")
 print("----------------------------------------")
 
 ip4_addr_re = re.compile('(:?\d{1,4}\.){3}\d{1,4}')
@@ -134,7 +134,7 @@ try:
             calc_thread = threading.Thread(target=generate_calculations,args=(server_func,calc_queue,translate_timing_to_dict(options.timing),))
             calc_thread.daemon = True
             calc_thread.start()
-        if re.match('rc', user_input):
+        if re.match('ra', user_input):
             ricart_agrawala = ra.RicartAgrawalaAlgorithm(server_func)
             ricart_agrawala.start(True)
     # wait until shutdown

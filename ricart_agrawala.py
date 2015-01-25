@@ -16,9 +16,9 @@ class RicartAgrawalaAlgorithm:
         if self.server_functions.calc_queue and not self.server_functions.request_sent:
             self.server_functions.received_replies_servers = []
             # increment clock counter
-            self.server_functions.clock_timestamp += 1
             # send request to all servers
             for server in self.server_functions.known_server_addr:
+                self.server_functions.clock_timestamp += 1
                 con = xmlrpc.client.ServerProxy(utils.get_con_string(server))
                 print("Send request to {}".format(server))
                 thread = threading.Thread(target=con.requestAccess,
