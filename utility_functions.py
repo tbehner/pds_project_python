@@ -105,7 +105,7 @@ def generate_calculations(server_func, calculations_queue, timing_dict):
         time.sleep(min_wait_time)
 
         # generate new calculation
-        if time.time() >= next_calc_time:
+        if (time.time() >= next_calc_time) and (current_time - start_time < total_running_time):
             calculation_op = calculations[random.randint(0, len(calculations) - 2)]
             calculation_value = random.randint(1, 10)
             calculations_queue.append((calculation_op, [int(calculation_value)]))
