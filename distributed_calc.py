@@ -9,11 +9,13 @@ from distributed_server import *
 from utility_functions import *
 from netifaces import AF_INET
 import netifaces as ni
+import ricart_agrawala as ra
 import random
 random.seed()
 
 parser = OptionParser()
 parser.add_option( "-c", "--connect", dest="server_con", help="connect to server with the given ip address and port number", metavar="ADDRESS:PORT")
+parser.add_option("--ip", dest="ip", help="specifies the ip adress for this node", type="string")
 parser.add_option( "-p", "--port", dest="port", help="open port with given number", metavar="PORT", type="int", default=2222)
 parser.add_option( "--token-ring", dest="token_ring", action="store_true", help="set algorithm to token ring", default=False)
 parser.add_option( "-o", "--output", dest="token_output", action="store_true", metavar="BOOL", default=False)
@@ -77,7 +79,7 @@ start server thread
 server = SimpleXMLRPCServer(("", options.port), ChattyRequestHandler,logRequests=False)
 # reset port, in case the port was arbitrary set by system
 options.port = server.socket.getsockname()[1]
-server_func = ServerFunctions(options.port,options.token_output)
+server_func = ServerFunctions(options.ip, options.port, options.token_output)
 server.register_instance(server_func)
 server_thread = threading.Thread(target=start_serving, args=(server,))
 server_thread.daemon = True
@@ -131,7 +133,9 @@ try:
             calc_thread = threading.Thread(target=generate_calculations,args=(server_func,calc_queue,translate_timing_to_dict(options.timing),))
             calc_thread.daemon = True
             calc_thread.start()
-
+        if re.match('rc', user_input):
+            ricart_agrawala = ra.RicartAgrawalaAlgorithm(server_func)
+            ricart_agrawala.start(True)
     # wait until shutdown
     server_thread.join()
 except KeyboardInterrupt:
